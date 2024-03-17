@@ -1,0 +1,36 @@
+<%- include('../includes/head.ejs')  %>
+
+    <body>
+        <%- include('../includes/navbar.ejs')%>
+            <main>
+
+                <ul>
+                    <% if(prods.length !== 0) { %>
+                        <% for(let i = 0; i < prods.length; i++) { %>
+                            <li>
+                                <span><%= prods[i]["title"] %></span>
+                                <img src="<%= prods[i].imageUrl %>" alt="NO IMAGE AVAILABLE">
+                                <span><%= prods[i]["price"] %></span>
+                                <h4>
+                                    <%= prods[i]["description"] %>
+                                </h4>
+
+                                <form action="/admin/edit-product/<%= prods[i].id %>" method="GET">
+                                    <button>Edit</button>
+                                    <!-- <input type="hidden" name="productId" value="<%= prods[i].id %>"> -->
+                                </form>
+                                <form action="/admin/delete-product/<%= prods[i].id %>" method="POST">
+                                    <button>Delete</button>
+                                    <!-- <input type="hidden" name="productId" value="<%= prods[i].id %>"> -->
+                                </form>
+                            </li>
+                            <% } %>
+                                <% } else { %>
+                                    <h1>NO PRODUCTS AVAILABLE</h1>
+                                    <% } %>
+                </ul>
+            </main>
+            <%- include('../includes/end.ejs')%>
+    </body>
+
+    </html>

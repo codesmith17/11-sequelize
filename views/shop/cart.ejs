@@ -1,0 +1,33 @@
+<%- include('../includes/head.ejs') %>
+
+    <body>
+        <%- include('../includes/navbar.ejs') %>
+            <main>
+                <% if (cartProducts.length === 0) { %>
+                    <h1>CART IS EMPTY</h1>
+                    <% } else { %>
+                        <h1>USER CART</h1>
+                        <h2>TOTAL PRICE:
+                            <%= totalPrice  %>
+                        </h2>
+                        <ul>
+                            <% for (let i = 0; i < cartProducts.length; i++) { %>
+                                <li>
+                                    <img src="<%= cartProducts[i].productData.imageUrl  %>" alt="<%= cartProducts[i].productData.title  %>">
+                                    <!-- <strong>ID:</strong>
+                                    <%= cartProducts[i].productData.id %> | -->
+                                    <strong>Title:</strong>
+                                    <%= cartProducts[i].productData.title %> |
+                                        <strong>Quantity:</strong>
+                                        <%= cartProducts[i].quantity %>
+                                            <form action="/shop/cart-delete" method="POST">
+                                                <input type="hidden" value="<%= cartProducts[i].productData.id %>" name="productId">
+                                                <button type="submit">DELETE</button>
+                                            </form>
+                                </li>
+                                <% } %>
+                        </ul>
+                        <% } %>
+            </main>
+    </body>
+    <%- include('../includes/end.ejs') %>

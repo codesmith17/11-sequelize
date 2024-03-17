@@ -1,0 +1,19 @@
+<%- include("../includes/head.ejs") %>
+
+    <body>
+        <%- include("../includes/navbar.ejs") %>
+            <main>
+                <h2>YOU CANNOT EDIT THE ID OF PARTICULAR PRODUCT</h2>
+                <h2>MAKE THE REQUIRED CHANGES</h2>
+                <form action="/admin/edit-product/<%= product.id %>" method="POST">
+                    <input type="text" name="productName" placeholder="ENTER TITLE" value="<%= product.title %>">
+
+                    <input type="text" name="productImg" value="<%- product.imageUrl %>" placeholder="ENTER IMAGE URL">
+                    <input type="number" value="<%= product.price %>" name="productPrice" placeholder="ENTER PRICE">
+                    <textarea value placeholder="ENTER DESCRIPTION" name="productDescription" name="" id="" cols="30" rows="10"><%= product.description %></textarea>
+                    <button type="submit">CLICK</button>
+                </form>
+
+
+            </main>
+            <%- include("../includes/end.ejs") %>
