@@ -14,18 +14,27 @@ const addProductToYourListPost = (req, res, next) => {
     const img = req.body.productImg;
     const price = parseInt(req.body.productPrice, 10);
     const description = req.body.productDescription;
+
+    // console.log(req);
+    console.log(req.user)
+    if (!req.user) {
+        return res.status(500).send("User not found");
+    }
+
     Product.create({
             title: title,
             price: price,
-            imageUrl: img, // Fix: Use img instead of imageUrl
-            description: description
+            imageUrl: img,
+            description: description,
+            userId: req.user.dataValues.id,
         })
         .then((result) => {
-            console.log(result);
-            res.redirect("/admin/add-product");
+            res.redirect("/admin/products");
         })
         .catch(err => console.log(err));
 };
+
+
 
 const editProductGet = (req, res, next) => {
     const productId = req.params.productId;

@@ -1,15 +1,92 @@
 const path = require('path');
 const { Product } = require(path.join(__dirname, "..", "models", "product.js"));
 const { Cart } = require(path.join(__dirname, "..", "models", "cart.js"));
-const fs = require("fs");
+const { Order } = require(path.join(__dirname, "..", "models", "order.js"));
+const { OrderItem } = require(path.join(__dirname, "..", "models", "order-item.js"));
+const { CartItem } = require(path.join(__dirname, "..", "models", "cart-item.js"));
+// const fs = require("fs");
+
+const postOrder = (req, res, next) => {
+    const userId = req.cart[0].dataValues.userId;
+
+    // Find all cart items for the user
+    CartItem.findAll({
+            where: { cartUserId: userId }
+        })
+        .then(cartItems => {
+            // Calculate totalQuantity
+            let totalQuantity = 0;
+            cartItems.forEach(cartItem => {
+                totalQuantity += cartItem.quantity;
+            });
+
+            // Create an order for the user
+            return Order.create({
+                    userId: userId,
+                    quantity: totalQuantity // Adding totalQuantity to the Order table
+                        // You may want to add more information here, like order total, address, etc.
+                })
+                .then(order => {
+                    // Map cart items to order items and associate them with the order
+                    const orderItems = cartItems.map(cartItem => {
+                        return {
+                            orderId: order.id,
+                            productId: cartItem.productId,
+                            quantity: cartItem.quantity
+                        };
+                    });
+                    // Create order items
+                    return OrderItem.bulkCreate(orderItems);
+                })
+                .then(() => {
+                    // Clear the cart after order creation
+                    return CartItem.destroy({
+                        where: { cartUserId: userId }
+                    });
+                })
+                .then(() => {
+                    // Redirect to some success page or render a success message
+                    res.redirect("/shop/orders");
+                })
+                .catch(err => {
+                    console.error('Error creating order:', err);
+                    res.status(500).send('Internal Server Error');
+                });
+        })
+        .catch(err => {
+            console.error('Error fetching cart items:', err);
+            res.status(500).send('Internal Server Error');
+        });
+}
 
 const getOrders = (req, res, next) => {
-    const ejsPath = path.join(__dirname, "..", "views", "shop", "orders.ejs")
-    res.render(ejsPath, {
-        path: "/orders",
-        pageTitle: "ORDERS"
-    })
+    // Fetch orders
+    Order.findAll()
+        .then(orders => {
+            // Fetch order items
+            console.log("orders", orders);
+            OrderItem.findAll()
+                .then(orderItems => {
+                    console.log("order items", orderItems);
+                    const ejsPath = path.join(__dirname, "..", "views", "shop", "order.ejs");
+                    res.render(ejsPath, {
+                        orders: orders,
+                        orderItems: orderItems,
+                        pageTitle: "Orders and Items",
+                        path: "/orders-and-items"
+                    });
+                })
+                .catch(err => {
+                    console.error('Error fetching order items:', err);
+                    res.status(500).send('Internal Server Error');
+                });
+        })
+        .catch(err => {
+            console.error('Error fetching orders:', err);
+            res.status(500).send('Internal Server Error');
+        });
 }
+
 
 const getIndex = (req, res, next) => {
 
@@ -30,77 +107,112 @@ const getIndex = (req, res, next) => {
 
 const getCart = (req, res, next) => {
     const ejsPath = path.join(__dirname, "..", "views", "shop", "cart.ejs");
-    const cartProducts = [];
-    Cart.getCart((fetchedCart) => {
+    const userId = req.cart[0].dataValues.userId;
 
-        Product.findAll((products) => {
-            // console.log("Fetched products:", fetchedCart.products.length, "wow", products);
-            for (let i = 0; i < products.length; i++) {
-                for (let j = 0; j < fetchedCart.products.length; j++) {
-                    if (products[i]["id"] === fetchedCart["products"][j]["id"])
-                        cartProducts.push({ productData: products[i], quantity: fetchedCart["products"][j]["quantity"] })
+    if (userId === 1) {
+        CartItem.findAll({
+                where: {
+                    cartUserId: userId
                 }
-            }
-            console.log(cartProducts);
-            res.render(ejsPath, { path: "/shop/cart", cartProducts: cartProducts, pageTitle: "CART", totalPrice: fetchedCart.totalPrice });
-        })
+            })
+            .then(cartProducts => {
+                const productIds = cartProducts.map(item => item.productId);
 
-    });
+                return Product.findAll({
+                        where: {
+                            id: productIds
+                        }
+                    })
+                    .then(products => {
+                        const productMap = {};
+                        products.forEach(product => {
+                            productMap[product.id] = product;
+                        });
+
+                        const cartProductsList = cartProducts.map(item => {
+                            return {
+
+                                productData: {
+                                    id: productMap[item.productId].id,
+                                    title: productMap[item.productId].title,
+                                    quantity: item.quantity,
+                                    imageUrl: productMap[item.productId].imageUrl
+                                }
+                            };
+                        });
+
+                        console.log("Cart products list:", cartProductsList);
+
+                        res.render(ejsPath, { path: "/shop/cart", cartProducts: cartProductsList, pageTitle: "CART", totalPrice: 0 });
+                    });
+            })
+            .catch(err => {
+                console.error('Error fetching cart items:', err);
+                res.status(500).send('Internal Server Error');
+            });
+    } else {
+        res.status(404).send('Cart not found');
+    }
 }
+
+
+
 const postCart = (req, res, next) => {
     const productId = req.body.productId;
-    Product.findById(productId, product => {
-        Cart.addProduct(productId, product.price);
-    })
-    res.redirect("/shop/cart")
+    const cartUserId = 1;
+
+
+    CartItem.findOne({
+            where: {
+                productId: productId,
+                cartUserId: cartUserId
+            }
+        })
+        .then(cartItem => {
+            if (cartItem) {
+                cartItem.id = productId;
+                cartItem.quantity += 1;
+                cartItem.cartUserId = cartUserId;
+                return cartItem.save();
+
+
+            } else {
+                return CartItem.create({
+                    id: productId,
+                    quantity: 1,
+                    cartUserId: cartUserId,
+                    productId: productId
+                });
+            }
+        })
+        .then(() => {
+            res.redirect("/shop/cart");
+        })
+        .catch(err => {
+            console.error('Error adding product to cart:', err);
+            res.status(500).send('Internal Server Error');
+        });
 }
+
 const postCartDelete = (req, res, next) => {
     const productId = req.body.productId;
-    Cart.fetchAll((fetchedProducts) => {
-        let cartProductToBeDeletedIndex;
-
-        for (let i = 0; i < fetchedProducts.products.length; i++) {
-            if (productId === fetchedProducts.products[i].id) {
-                cartProductToBeDeletedIndex = i;
-                break;
+    CartItem.findOne({
+            where: { productId: productId }
+        })
+        .then((cartItem) => {
+            if (!cartItem) {
+                throw new Error("CartItem not found");
             }
-        }
-        let priceToBeSubtracted;
-        Product.findById(productId, product => {
-            let qty = fetchedProducts.products[cartProductToBeDeletedIndex].quantity;
-            priceToBeSubtracted = product.price * qty;
-            fetchedProducts.totalPrice -= priceToBeSubtracted;
-            const cartDataPath = path.join(__dirname, "..", "data", "cart.json");
 
-            if (cartProductToBeDeletedIndex !== -1) {
-                fetchedProducts.products.splice(cartProductToBeDeletedIndex, 1);
-
-                fs.writeFile(cartDataPath, JSON.stringify(fetchedProducts), (err) => {
-                    if (err) {
-                        console.log(err);
-                    } else {
-                        res.redirect("/shop/cart");
-                    }
-                });
-            } else {
-                console.log('Product not found');
-                res.redirect("/shop/cart");
-            }
-        });
-
-
-
-
-
-    });
+            return cartItem.destroy();
+        })
+        .then(() => {
+            res.redirect("/shop/cart");
+        })
+        .catch(err => console.log(err));
 };
-const getCheckout = (req, res, next) => {
-    const ejsPath = path.join(__dirname, "..", "views", "shop", "index.ejs");
-    res.render(ejsPath, {
-        path: "/admin/products",
-        pageTitle: "CHECKOUT"
-    })
-}
+
+
 const allProducts = (req, res, next) => {
     Product.findAll()
         .then((products) => {
@@ -120,14 +232,12 @@ const allProducts = (req, res, next) => {
 
 const productId = (req, res, next) => {
     const prodId = req.params.prodId;
-    // console.log(prodId);
     Product.findAll({
             where: {
                 id: prodId
             }
         })
         .then((product) => {
-            // console.log(product);
             const ejsPath = path.join(__dirname, "..", "views", "shop", "product-detail.ejs");
             res.render(ejsPath, {
                 product: product[0],
@@ -138,5 +248,75 @@ const productId = (req, res, next) => {
         .catch((err) => { console.log(err) })
 
 };
+const postCartIncrement = (req, res, next) => {
+    const productId = req.body.productId;
+    const userId = req.cart[0].dataValues.userId;
 
-module.exports = { getOrderMethod: getOrders, getIndexFileMethod: getIndex, getCartMethod: getCart, postCartMethod: postCart, getCheckoutMethod: getCheckout, allProducts, productId, postCartDeleteMethod: postCartDelete };
+    if (userId === 1) {
+        // Find the cart item with the given product ID
+        CartItem.findOne({
+                where: {
+                    productId: productId
+                }
+            })
+            .then((cartItem) => {
+                if (cartItem) {
+                    // If the cart item exists, increment its quantity
+                    cartItem.quantity += 1;
+                    return cartItem.save(); // Save the updated cart item
+                }
+            })
+            .then((updatedCartItem) => {
+                // Handle the response after updating the cart item
+                console.log(updatedCartItem);
+                res.redirect("/shop/cart");
+            })
+            .catch(err => {
+                console.log(err);
+                res.status(500).send("Internal server error");
+            });
+    } else {
+        // Handle unauthorized access
+        res.status(403).send("Unauthorized");
+    }
+}
+const postCartDecrement = (req, res, next) => {
+    const productId = req.body.productId;
+    const userId = req.cart[0].dataValues.userId;
+
+    if (userId === 1) {
+        // Find the cart item with the given product ID
+        CartItem.findOne({
+                where: {
+                    productId: productId
+                }
+            })
+            .then((cartItem) => {
+                if (cartItem) {
+                    // If the cart item exists, decrement its quantity
+                    cartItem.quantity -= 1; // Corrected decrement operation
+                    // Save the updated cart item
+                    if (cartItem.quantity === 0) {
+                        return cartItem.destroy();
+                    }
+                    return cartItem.save();
+                }
+            })
+            .then((updatedCartItem) => {
+                // Handle the response after updating the cart item
+                // console.log(updatedCartItem);
+                res.redirect("/shop/cart");
+            })
+            .catch(err => {
+                console.log(err);
+                res.status(500).send("Internal server error");
+            });
+    } else {
+        // Handle unauthorized access
+        res.status(403).send("Unauthorized");
+    }
+}
+
+
+
+module.exports = { postOrderMethod: postOrder, getIndexFileMethod: getIndex, getCartMethod: getCart, postCartMethod: postCart, allProducts, productId, postCartDeleteMethod: postCartDelete, postCartIncrement, postCartDecrement, getOrders };

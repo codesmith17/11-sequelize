@@ -6,10 +6,11 @@ const productController = require(path.join(__dirname, "..", "controllers", "sho
 router.get("/", productController["getIndexFileMethod"]);
 router.get("/products", productController.allProducts);
 router.get("/products/:prodId", productController["productId"]);
-router.get("/orders", productController["getOrderMethod"]);
+router.post("/orders", productController["postOrderMethod"]);
 router.get("/cart", productController["getCartMethod"]);
 router.post("/cart", productController["postCartMethod"]);
-router.get("/checkout", productController["getCheckoutMethod"]);
+router.get("/orders", productController["getOrders"]);
 router.post("/cart-delete", productController["postCartDeleteMethod"])
-
+router.post("/cart-update-increment", productController["postCartIncrement"]);
+router.post("/cart-update-decrement", productController["postCartDecrement"]);
 module.exports = { "router": router };
