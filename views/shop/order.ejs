@@ -19,6 +19,7 @@
                         <% orderItems.forEach(orderItem => { %>
                             <% if (orderItem.orderId === order.id) { %>
                                 <div class="order-item">
+                                    <img src="<%= orderItem.product.imageUrl %>" alt="Product Image">
                                     <p>Product ID:
                                         <%= orderItem.productId %>
                                     </p>

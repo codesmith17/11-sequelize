@@ -60,21 +60,40 @@ const postOrder = (req, res, next) => {
 }
 
 const getOrders = (req, res, next) => {
-    // Fetch orders
     Order.findAll()
         .then(orders => {
-            // Fetch order items
-            console.log("orders", orders);
             OrderItem.findAll()
                 .then(orderItems => {
-                    console.log("order items", orderItems);
-                    const ejsPath = path.join(__dirname, "..", "views", "shop", "order.ejs");
-                    res.render(ejsPath, {
-                        orders: orders,
-                        orderItems: orderItems,
-                        pageTitle: "Orders and Items",
-                        path: "/orders-and-items"
-                    });
+                    // Fetch product information separately
+                    const productIds = orderItems.map(orderItem => orderItem.productId);
+                    Product.findAll({ where: { id: productIds } })
+                        .then(products => {
+                            // Map product information to order items
+                            const orderItemsWithProductInfo = orderItems.map(orderItem => {
+                                const product = products.find(product => product.id === orderItem.productId);
+                                return {
+                                    id: orderItem.id,
+                                    quantity: orderItem.quantity,
+                                    createdAt: orderItem.createdAt,
+                                    updatedAt: orderItem.updatedAt,
+                                    orderId: orderItem.orderId,
+                                    productId: orderItem.productId,
+                                    product: product // Include product information
+                                };
+                            });
+
+                            const ejsPath = path.join(__dirname, "..", "views", "shop", "order.ejs");
+                            res.render(ejsPath, {
+                                orders: orders,
+                                orderItems: orderItemsWithProductInfo,
+                                pageTitle: "Orders and Items",
+                                path: "/shop/orders"
+                            });
+                        })
+                        .catch(err => {
+                            console.error('Error fetching products:', err);
+                            res.status(500).send('Internal Server Error');
+                        });
                 })
                 .catch(err => {
                     console.error('Error fetching order items:', err);
@@ -86,6 +105,7 @@ const getOrders = (req, res, next) => {
             res.status(500).send('Internal Server Error');
         });
 }
+
 
 
 const getIndex = (req, res, next) => {
