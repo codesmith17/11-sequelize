@@ -13,24 +13,24 @@
                         <ul>
                             <% for (let i = 0; i < cartProducts.length; i++) { %>
                                 <li>
-                                    <img src="<%= cartProducts[i].productData.imageUrl %>" alt="<%= cartProducts[i].productData.imageUrl %>">
-                                    <!-- <strong>ID:</strong> <%= cartProducts[i].productData.id %> | -->
+                                    <img src="<%= cartProducts[i].imageUrl %>" alt="<%= cartProducts[i].imageUrl %>">
+                                    <!-- <strong>ID:</strong> <%= cartProducts[i]._id %> | -->
                                     <strong>Title:</strong>
-                                    <%= cartProducts[i].productData.title %> |
-                                        <strong>Quantity:<%= cartProducts[i].productData.quantity %></strong>
+                                    <%= cartProducts[i].title %> |
+                                        <strong>Quantity:<%= cartProducts[i].quantity.quantity %></strong>
                                         <!-- Plus Button -->
                                         <form action="/shop/cart-update-increment" method="POST">
-                                            <input type="hidden" value="<%= cartProducts[i].productData.id %>" name="productId">
+                                            <input type="hidden" value="<%= cartProducts[i]._id %>" name="productId">
                                             <button type="submit">+</button>
                                         </form>
 
                                         <!-- Minus Button -->
                                         <form action="/shop/cart-update-decrement" method="POST">
-                                            <input type="hidden" value="<%= cartProducts[i].productData.id %>" name="productId">
+                                            <input type="hidden" value="<%= cartProducts[i]._id %>" name="productId">
                                             <button type="submit">-</button>
                                         </form>
-                                        <form action="/shop/cart-delete" method="POST">
-                                            <input type="hidden" value="<%= cartProducts[i].productData.id %>" name="productId">
+                                        <form action="/shop/cart-delete/" method="POST">
+                                            <input type="hidden" value="<%= cartProducts[i]._id %>" name="productId">
                                             <button type="submit">DELETE</button>
                                         </form>
                                 </li>

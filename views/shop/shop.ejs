@@ -15,11 +15,11 @@
                                     <%= prods[i]["description"] %>
                                 </h4>
 
-                                <form action="/admin/edit-product/<%= prods[i].id %>" method="GET">
+                                <form action="/admin/edit-product/<%= prods[i]._id %>" method="GET">
                                     <button>Edit</button>
                                     <!-- <input type="hidden" name="productId" value="<%= prods[i].id %>"> -->
                                 </form>
-                                <form action="/admin/delete-product/<%= prods[i].id %>" method="POST">
+                                <form action="/admin/delete-product/<%= prods[i]._id %>" method="POST">
                                     <button>Delete</button>
                                     <!-- <input type="hidden" name="productId" value="<%= prods[i].id %>"> -->
                                 </form>

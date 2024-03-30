@@ -11,5 +11,7 @@ router.post("/add-product", addProductObject["addProductPost"])
 router.get("/products", addProductObject["getProductsMethod"]);
 router.get("/edit-product/:productId", addProductObject["editProductMethod"]);
 router.post("/edit-product/:productId", addProductObject["editProductPostMethod"]);
+// router.post("/delete-product/:productId", addProductObject["deleteProductPostMethod"]);
+
 router.post("/delete-product/:productId", addProductObject["deleteProductPostMethod"]);
 module.exports = { "router": router };

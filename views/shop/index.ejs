@@ -15,10 +15,10 @@
                                     <%= prods[i]["description"] %>
                                 </h4>
 
-                                <a href="/shop/products/<%= prods[i].id %>">DETAILS</a>
+                                <a href="/shop/products/<%= prods[i]._id %>">DETAILS</a>
                                 <form action="/shop/cart" method="POST">
                                     <button>Add to Cart</button>
-                                    <input type="hidden" name="productId" value="<%= prods[i].id %>">
+                                    <input type="hidden" name="productId" value="<%= prods[i]._id %>">
                                 </form>
                             </li>
                             <% } %>

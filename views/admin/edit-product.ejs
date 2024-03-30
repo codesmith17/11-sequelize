@@ -5,7 +5,7 @@
             <main>
                 <h2>YOU CANNOT EDIT THE ID OF PARTICULAR PRODUCT</h2>
                 <h2>MAKE THE REQUIRED CHANGES</h2>
-                <form action="/admin/edit-product/<%= product.id %>" method="POST">
+                <form action="/admin/edit-product/<%= product._id %>" method="POST">
                     <input type="text" name="productName" placeholder="ENTER TITLE" value="<%= product.title %>">
 
                     <input type="text" name="productImg" value="<%- product.imageUrl %>" placeholder="ENTER IMAGE URL">
