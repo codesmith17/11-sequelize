@@ -1,243 +1,224 @@
-const path = require('path');
-const { Product } = require(path.join(__dirname, "..", "models", "product.js"));
-const { User } = require(path.join(__dirname, "..", "models", "user.js"));
-// const { Order } = require(path.join(__dirname, "..", "models", "order.js"));
-// const { OrderItem } = require(path.join(__dirname, "..", "models", "order-item.js"));
-// const { CartItem } = require(path.join(__dirname, "..", "models", "cart-item.js"));
-// const fs = require("fs");
+const path = require("path");
+const mongodb = require("mongodb");
+const { get } = require("http");
+const { getDb } = require(path.join(__dirname, "..", "utils", "database.js"));
 
-// const postOrder = (req, res, next) => {
-//     const userId = req.cart[0].dataValues.userId;
+class User {
+    constructor(username, email, cart, id) {
+        this.name = username;
+        this.cart = cart;
+        this._id = id;
+        this.email = email;
+    }
+    save() {
+        const db = getDb();
+        let dbOp;
+        if (this._id) {
+            dbOp = db.collection('users')
+                .updateOne({ _id: new mongodb.ObjectId(this._id) }, { $set: this });
+        } else {
+            dbOp = db
+                .collection('users')
+                .insertOne(this);
+        }
+        return dbOp
+            .then(result => console.log(result))
+            .catch(err => console.log(err))
+    }
 
-//     // Find all cart items for the user
-//     CartItem.findAll({
-//             where: { cartUserId: userId }
-//         })
-//         .then(cartItems => {
-//             // Calculate totalQuantity
-//             let totalQuantity = 0;
-//             cartItems.forEach(cartItem => {
-//                 totalQuantity += cartItem.quantity;
-//             });
+    addToCart(product) {
+        if (!this.cart || !this.cart.items) {
+            this.cart = { items: [] }; // Initialize cart if it's undefined
+        }
+        if (!this.cart.totalPrice) {
+            this.cart.totalPrice = 0;
+        }
 
-//             // Create an order for the user
-//             return Order.create({
-//                     userId: userId,
-//                     quantity: totalQuantity // Adding totalQuantity to the Order table
-//                         // You may want to add more information here, like order total, address, etc.
-//                 })
-//                 .then(order => {
-//                     // Map cart items to order items and associate them with the order
-//                     const orderItems = cartItems.map(cartItem => {
-//                         return {
-//                             orderId: order.id,
-//                             productId: cartItem.productId,
-//                             quantity: cartItem.quantity
-//                         };
-//                     });
-//                     // Create order items
-//                     return OrderItem.bulkCreate(orderItems);
-//                 })
-//                 .then(() => {
-//                     // Clear the cart after order creation
-//                     return CartItem.destroy({
-//                         where: { cartUserId: userId }
-//                     });
-//                 })
-//                 .then(() => {
-//                     // Redirect to some success page or render a success message
-//                     res.redirect("/shop/orders");
-//                 })
-//                 .catch(err => {
-//                     console.error('Error creating order:', err);
-//                     res.status(500).send('Internal Server Error');
-//                 });
-//         })
-//         .catch(err => {
-//             console.error('Error fetching cart items:', err);
-//             res.status(500).send('Internal Server Error');
-//         });
-// }
+        const newQuantity = 1;
+        const currentItems = this.cart.items;
 
-// const getOrders = (req, res, next) => {
-//     Order.findAll()
-//         .then(orders => {
-//             OrderItem.findAll()
-//                 .then(orderItems => {
-//                     // Fetch product information separately
-//                     const productIds = orderItems.map(orderItem => orderItem.productId);
-//                     Product.findAll({ where: { id: productIds } })
-//                         .then(products => {
-//                             // Map product information to order items
-//                             const orderItemsWithProductInfo = orderItems.map(orderItem => {
-//                                 const product = products.find(product => product.id === orderItem.productId);
-//                                 return {
-//                                     id: orderItem.id,
-//                                     quantity: orderItem.quantity,
-//                                     createdAt: orderItem.createdAt,
-//                                     updatedAt: orderItem.updatedAt,
-//                                     orderId: orderItem.orderId,
-//                                     productId: orderItem.productId,
-//                                     product: product // Include product information
-//                                 };
-//                             });
+        // Ensure that product is defined before accessing its properties
+        if (!product || !product._id) {
+            throw new Error('Invalid product provided');
+        }
 
-//                             const ejsPath = path.join(__dirname, "..", "views", "shop", "order.ejs");
-//                             res.render(ejsPath, {
-//                                 orders: orders,
-//                                 orderItems: orderItemsWithProductInfo,
-//                                 pageTitle: "Orders and Items",
-//                                 path: "/shop/orders"
-//                             });
-//                         })
-//                         .catch(err => {
-//                             console.error('Error fetching products:', err);
-//                             res.status(500).send('Internal Server Error');
-//                         });
-//                 })
-//                 .catch(err => {
-//                     console.error('Error fetching order items:', err);
-//                     res.status(500).send('Internal Server Error');
-//                 });
-//         })
-//         .catch(err => {
-//             console.error('Error fetching orders:', err);
-//             res.status(500).send('Internal Server Error');
-//         });
-// }
+        // Check if the product already exists in the cart
+        let existingProduct = currentItems.find(item => item.productId.toString() === product._id.toString());
 
+        if (existingProduct) {
+            // If product exists, update its quantity
+            existingProduct.quantity += newQuantity;
+        } else {
+            // If product doesn't exist, add it to the cart
+            currentItems.push({
+                productId: product._id,
+                quantity: newQuantity
+            });
+        }
 
+        let totalPrice = this.cart.totalPrice;
 
-const getIndex = (req, res, next) => {
+        const db = getDb();
 
-    Product.fetchAll()
-        .then((products) => {
-            // console.log("2", products);
-            const ejsPath = path.join(__dirname, "..", "views", "shop", "index.ejs");
-            res.render((ejsPath), {
-                prods: products,
-                pageTitle: "INDEX PAGE",
-                path: "/shop"
+        // Retrieve the price of each product from the database
+        db.collection('products')
+            .findOne({ _id: new mongodb.ObjectId(product._id) })
+            .then(foundProduct => {
+                if (foundProduct) {
+                    const productPrice = foundProduct.price;
+                    totalPrice += productPrice;
+                    this.cart.totalPrice = totalPrice;
+
+                    // Update the cart in the database
+                    return db.collection('users')
+                        .updateOne({ _id: new mongodb.ObjectId(this._id) }, { $set: { cart: this.cart } });
+                }
             })
-        })
-        .catch((err) => {
-            console.log(err);
-        })
-
-};
-
-const getCart = (req, res, next) => {
-    const ejsPath = path.join(__dirname, "..", "views", "shop", "cart.ejs");
-    req.user.getCart()
-        .then(products => {
-
-            // Handle products, e.g., render a view with the cart items
-            console.log(products);
-            res.render(ejsPath, { totalPrice: req.user.cart.totalPrice, cartProducts: products, pageTitle: "APNA CART", path: "/shop/cart" });
-        })
-        .catch(err => {
-            console.log(err);
-            // Handle error, e.g., render an error page
-            res.status(500).send('Error fetching cart');
-        });
+            .catch(err => console.log(err));
+    }
 
 
-}
+    getCart() {
+        const db = getDb();
+        const productIds = this.cart.items.map(item => item.productId);
+        // console.log(productIds);
+        return db.collection('products')
+            .find({ _id: { $in: productIds } })
+            .toArray()
+            .then(products => {
+                const cartResult = products.map(product => {
+                    return {...product,
+                        quantity: this.cart.items.find(item => item.productId.toString() === product._id.toString())
+                    };
+
+                });
+                // console.log(cartResult);
+                return cartResult;
+            })
+            .catch(err => console.log(err));
+    }
+
+    cartDelete(productId) {
+        const db = getDb();
+        let currentItems = this.cart.items;
+        currentItems = currentItems.filter(item => item.productId.toString() !== productId);
+
+        return db.collection('products')
+            .findOne({ _id: new mongodb.ObjectId(productId) })
+            .then(product => {
+                const productPrice = product.price;
+                const totalPrice = currentItems.reduce((acc, item) => {
+                    return acc + (item.quantity * productPrice);
+                }, 0);
+
+                return db.collection('users')
+                    .updateOne({ _id: new mongodb.ObjectId(this._id) }, { $set: { cart: { items: currentItems, totalPrice: totalPrice } } });
+            })
+            .catch(err => console.log(err));
+    }
+
+    incrementCart(productId) {
+        const db = getDb();
+        let currentItems = this.cart.items;
+        let existingProductIndex = currentItems.findIndex(item => item.productId.toString() === productId.toString());
+
+        if (existingProductIndex !== -1) {
+            const currentQuantity = currentItems[existingProductIndex].quantity;
+            currentItems[existingProductIndex].quantity = currentQuantity + 1;
+
+            return db.collection('products')
+                .findOne({ _id: new mongodb.ObjectId(productId) })
+                .then(product => {
+                    let productPrice = product.price;
+                    this.cart.totalPrice += productPrice;
+                    db.collection('users').updateOne({ _id: new mongodb.ObjectId(this._id) }, { $set: { cart: this.cart } });
+                })
+                .catch(err => console.log(err));
+        } else {
+            console.log("Product not found in cart.");
+            return Promise.resolve();
+        }
+    }
 
 
+    decrementCart(productId) {
+        const db = getDb();
+        let currentItems = this.cart.items;
+        let existingProductIndex = currentItems.findIndex(item => item.productId.toString() === productId.toString());
 
-const postCart = (req, res, next) => {
-    const productId = req.body.productId;
-    console.log(req.user);
+        if (existingProductIndex !== -1) {
+            const currentQuantity = currentItems[existingProductIndex].quantity;
 
+            // Decrement the quantity
+            currentItems[existingProductIndex].quantity = Math.max(0, currentQuantity - 1);
 
-    Product.findById(productId)
-        .then(product => {
-            if (!product) {
-                throw new Error('Product not found');
+            // If quantity becomes 0, remove the item from the array
+            if (currentItems[existingProductIndex].quantity === 0) {
+                currentItems.splice(existingProductIndex, 1);
             }
 
-            req.user.addToCart(product);
-        })
-        .then(() => {
-            // console.log(result);
-            res.redirect("/shop/cart");
-        })
-        .catch(err => {
-            console.error(err);
-            res.status(500).json({ error: 'Internal Server Error' });
-        });
-}
+            // Update the cart in the database
+            return db.collection('products')
+                .findOne({ _id: new mongodb.ObjectId(productId) })
+                .then(product => {
+                    let productPrice = product.price;
+                    this.cart.totalPrice -= productPrice;
+
+                    // Construct an updated cart object with the modified items array
+                    const updatedCart = {
+                        items: currentItems,
+                        totalPrice: this.cart.totalPrice
+                    };
+
+                    return db.collection('users').updateOne({ _id: new mongodb.ObjectId(this._id) }, { $set: { cart: updatedCart } });
+                })
+                .catch(err => console.log(err));
+        } else {
+            console.log("Product not found in cart.");
+            return Promise.resolve();
+        }
+    }
 
 
 
 
 
-const postCartDelete = (req, res, next) => {
-    const productId = req.body.productId;
-    // console.log(productId);
-    req.user.cartDelete(productId)
-        .then(() => {
-            // Handle success, e.g., redirect to the appropriate page
-            return res.redirect('/shop/cart');
-        })
-        .catch(err => {
-            console.log(err);
-            // Handle error, e.g., render an error page
-            res.status(500).send('Error deleting item from cart');
-        });
-};
 
 
 
-const allProducts = (req, res, next) => {
-    Product.fetchAll()
-        .then((products) => {
-            const ejsPath = path.join(__dirname, "..", "views", "shop", "index.ejs");
-            res.render((ejsPath), {
-                prods: products,
-                pageTitle: "INDEX PAGE",
-                path: "/shop"
+
+
+    static findById(userId) {
+        const db = getDb();
+        return db.collection('users')
+            .find({ _id: new mongodb.ObjectId(userId) })
+            .next()
+            .then(user => { return user; })
+            .catch(err => console.log(err))
+
+
+    }
+    addOrder() {
+        const db = getDb();
+        return this.getCart()
+            .then(product => {
+                const order = {
+                    items: product,
+                    user: {
+                        _id: new mongodb.ObjectId(this._id),
+                        name: this.name
+                    }
+                };
+                return db.collection('orders').insertOne(order);
             })
-        })
-        .catch((err) => {
-            console.log(err);
-        })
+            .then(result => {
+                this.cart = { items: [], totalPrice: 0 };
+                return db.collection('users')
+                    .updateOne({ _id: new mongodb.ObjectId(this._id) }, { $set: { cart: { items: [] } } })
+            });
+
+    }
 
 }
 
-
-const productId = (req, res, next) => {
-    const prodId = req.params.prodId;
-    Product.findById(prodId)
-        .then((product) => {
-            const ejsPath = path.join(__dirname, "..", "views", "shop", "product-detail.ejs");
-            // console.log("1", product);
-            res.render(ejsPath, {
-                product: product,
-                pageTitle: product.title,
-                path: "/shop/products",
-            })
-        })
-        .catch((err) => { console.log(err) })
-
-};
-const postCartIncrement = (req, res, next) => {
-    const productId = req.body.productId;
-    // console.log("assd", productId);
-    req.user.incrementCart(productId)
-        .then(() => res.redirect("/shop/cart"))
-        .catch(err => console.log(err));
-
-
-}
-const postCartDecrement = (req, res, next) => {
-    const productId = req.body.productId;
-    req.user.decrementCart(productId)
-        .then(() => res.redirect("/shop/cart"))
-        .catch(err => console.log(err))
-}
-
-
-
-module.exports = { getIndexFileMethod: getIndex, productId, allProducts, postCartMethod: postCart, getCartMethod: getCart, postCartDeleteMethod: postCartDelete, postCartIncrement, postCartDecrement }
+module.exports = { User }

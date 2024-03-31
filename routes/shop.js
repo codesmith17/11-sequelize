@@ -6,7 +6,7 @@ const productController = require(path.join(__dirname, "..", "controllers", "sho
 router.get("/", productController["getIndexFileMethod"]);
 router.get("/products", productController.allProducts);
 router.get("/products/:prodId", productController["productId"]);
-// router.post("/orders", productController["postOrderMethod"]);
+router.post("/orders", productController["postOrderMethod"]);
 router.get("/cart", productController["getCartMethod"]);
 router.post("/cart", productController["postCartMethod"]);
 // router.get("/orders", productController["getOrders"]);

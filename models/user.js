@@ -86,9 +86,14 @@ class User {
             .find({ _id: { $in: productIds } })
             .toArray()
             .then(products => {
-                return products.map(product => {
-                    return {...product, quantity: this.cart.items.find(item => item.productId.toString() === product._id.toString()) }
+                const cartResult = products.map(product => {
+                    return {...product,
+                        quantity: this.cart.items.find(item => item.productId.toString() === product._id.toString())
+                    };
+
                 });
+                // console.log(cartResult);
+                return cartResult;
             })
             .catch(err => console.log(err));
     }
@@ -193,7 +198,26 @@ class User {
 
 
     }
+    addOrder() {
+        const db = getDb();
+        return this.getCart()
+            .then(product => {
+                const order = {
+                    items: product,
+                    user: {
+                        _id: new mongodb.ObjectId(this._id),
+                        name: this.name
+                    }
+                };
+                return db.collection('orders').insertOne(order);
+            })
+            .then(result => {
+                this.cart = { items: [], totalPrice: 0 };
+                return db.collection('users')
+                    .updateOne({ _id: new mongodb.ObjectId(this._id) }, { $set: { cart: { items: [] } } })
+            });
 
+    }
 
 }
 
