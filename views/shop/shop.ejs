@@ -20,6 +20,7 @@
                                     <!-- <input type="hidden" name="productId" value="<%= prods[i].id %>"> -->
                                 </form>
                                 <form action="/admin/delete-product/<%= prods[i]._id %>" method="POST">
+                                    <input type="hidden" name="_csrf" value="<%= csrfToken  %>">
                                     <button>Delete</button>
                                     <!-- <input type="hidden" name="productId" value="<%= prods[i].id %>"> -->
                                 </form>

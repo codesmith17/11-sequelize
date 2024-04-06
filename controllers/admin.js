@@ -1,13 +1,19 @@
-const { privateDecrypt } = require('crypto');
-const { ObjectId } = require('mongodb');
 const path = require('path');
 
-
-const { Product } = require(path.join(__dirname, "..", "models", "product.js"));
+const User = require(path.join(__dirname, "..", "models", "user.js"));
+const Product = require(path.join(__dirname, "..", "models", "product.js"));
 // const { Cart } = require(path.join(__dirname, "..", "models", "cart.js"));
 const addProductToYourListGet = (req, res, next) => {
+    if (!req.session.isLoggedin) {
+        return res.redirect("/auth/login");
+    }
     const ejsPath = path.join(__dirname, "..", "views", "admin", "add-product.ejs")
-    res.render(ejsPath, { pageTitle: 'Add product', path: "/admin/add-product" });
+    res.render(ejsPath, {
+        pageTitle: 'ADD PRODUCT',
+        path: "/admin/add-product",
+        isAuthenticated: req.session.isLoggedin,
+        csrfToken: req.csrfToken(),
+    });
 };
 
 const addProductToYourListPost = (req, res, next) => {
@@ -15,10 +21,10 @@ const addProductToYourListPost = (req, res, next) => {
     const img = req.body.productImg;
     const price = parseInt(req.body.productPrice, 10);
     const description = req.body.productDescription;
-    console.log("1", req.user);
-    const userId = req.user._id;
+    // console.log("1", req.user);
+    // const userId = req.user._id;
 
-    const product = new Product(title, price, description, img, null, userId);
+    const product = new Product({ title: title, imageUrl: img, price: price, description: description, userId: req.session.user._id });
 
     // console.log(req);    
     // console.log(req.user)
@@ -35,17 +41,39 @@ const addProductToYourListPost = (req, res, next) => {
 
 const deleteProductPost = (req, res, next) => {
     const prodId = req.params.productId;
-    Product.deleteById(prodId)
+
+    Product.findByIdAndDelete(prodId)
         .then(result => {
-            console.log(result);
-            return result;
+            console.log(result); // Log the result of product deletion
+
+            // Find users who have the product in their cart
+            return User.find({ 'cart.items.productId': prodId });
         })
-        .catch(err => console.log(err))
-}
+        .then(usersWithProduct => {
+            // Update the carts of users who have the product in their cart
+            const updatePromises = usersWithProduct.map(user => {
+                user.cart.items = user.cart.items.filter(item => item.productId.toString() !== prodId.toString());
+                return user.save();
+            });
+
+            // Wait for all updates to finish
+            return Promise.all(updatePromises);
+        })
+        .then(() => {
+            // Redirect to admin products page after successful deletion and cart updates
+            res.redirect("/admin/products");
+        })
+        .catch(err => {
+            console.error(err);
+            next(err); // Pass the error to the error handling middleware
+        });
+};
+
 const editProductGet = (req, res, next) => {
     const productId = req.params.productId;
     const ejsPath = path.join(__dirname, "..", "views", "admin", "edit-product.ejs");
     // console.log(productId)
+
     Product.findById(productId)
         .then((fetchedProduct) => {
             if (!fetchedProduct) {
@@ -55,8 +83,11 @@ const editProductGet = (req, res, next) => {
             // console.log(fetchedProduct)
             res.render(ejsPath, {
                 product: fetchedProduct,
-                pageTitle: fetchedPrnoduct.title,
-                path: "/admin/edit-product"
+                pageTitle: fetchedProduct.title,
+                path: "/admin/edit-product",
+                isAuthenticated: req.session.isLoggedin,
+                csrfToken: req.csrfToken(),
+
             });
         })
         .catch(err => {
@@ -64,6 +95,8 @@ const editProductGet = (req, res, next) => {
             res.status(500).send("Internal Server Error");
         });
 };
+
+
 
 const editProductPost = (req, res, next) => {
     const title = req.body.productName;
@@ -77,42 +110,50 @@ const editProductPost = (req, res, next) => {
             if (!productData) {
                 return res.status(404).send('Product not found');
             }
-            const product = new Product(title, price, description, img, new ObjectId(productId));
+            productData.title = title;
+            productData.imageUrl = img;
+            productData.price = price;
+            productData.description = description;
             // Update product fields
 
-
             // Save the updated product
-            product.save().then(result => {
-                console.log("PRODUCT EDITED");
-                res.redirect("/admin/products");
-                // res.redirect("/admin/products");
-            }).catch(err => console.log(err));
-
+            return productData.save()
+                .then(result => {
+                    console.log("PRODUCT EDITED");
+                    res.redirect("/admin/products");
+                })
+                .catch(err => {
+                    console.error("Error saving edited product:", err);
+                    res.status(500).send('Internal Server Error');
+                });
         })
-
-    .catch(err => {
-        console.error("Error editing product:", err);
-        res.status(500).send('Internal Server Error');
-    });
+        .catch(err => {
+            console.error("Error editing product:", err);
+            res.status(500).send('Internal Server Error');
+        });
 };
 
 
 
 
 
-
 const getProducts = (req, res, next) => {
-    Product.fetchAll()
+    const isLoggedIn = req.get("Cookie") ? req.get("Cookie").substring(req.get("Cookie").indexOf("loggedIn=") + 9) : false;
+    Product.find()
+        .populate('userId')
         .then((fetchedProducts) => {
             // console.log("Fetched products:", fetchedProducts);
             const ejsPath = path.join(__dirname, "..", "views", "shop", "shop.ejs")
             res.render(ejsPath, {
                 path: "/admin/products",
                 prods: fetchedProducts,
-                pageTitle: "BOOKSHOP",
+                pageTitle: "ADMIN PRODUCTS",
+                isAuthenticated: req.session.isLoggedin,
+                csrfToken: req.csrfToken(),
+
             });
         })
         .catch((err) => console.log(err));
 }
 
-module.exports = { addProduct: addProductToYourListGet, addProductPost: addProductToYourListPost, editProductMethod: editProductGet, getProductsMethod: getProducts, editProductPostMethod: editProductPost, deleteProductPostMethod: deleteProductPost };
+module.exports = { addProduct: addProductToYourListGet, addProductPost: addProductToYourListPost, editProductMethod: editProductGet, editProductPostMethod: editProductPost, getProductsMethod: getProducts, deleteProductPostMethod: deleteProductPost };

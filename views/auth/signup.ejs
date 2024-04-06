@@ -1,0 +1,22 @@
+<%- include("../includes/head.ejs") %>
+
+    <body>
+        <%- include("../includes/navbar.ejs") %>
+            <main>
+                <% if(errorMessage) { %>
+                    <div class="error">
+                        <%= errorMessage %>
+                    </div>
+                    <% } %>
+                        <form action="/auth/signup" method="POST">
+                            <input type="email" name="email" placeholder="ENTER EMAIL">
+
+                            <input type="hidden" name="_csrf" value="<%= csrfToken  %>">
+                            <input type="password" name="password" placeholder="ENTER PASSWORD">
+                            <input type="password" name="confirmPassword" placeholder="CONFIRM PASSWORD">
+                            <button type="submit">Login</button>
+                        </form>
+
+
+            </main>
+            <%- include("../includes/end.ejs") %>

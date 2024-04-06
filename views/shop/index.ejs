@@ -16,10 +16,13 @@
                                 </h4>
 
                                 <a href="/shop/products/<%= prods[i]._id %>">DETAILS</a>
-                                <form action="/shop/cart" method="POST">
-                                    <button>Add to Cart</button>
-                                    <input type="hidden" name="productId" value="<%= prods[i]._id %>">
-                                </form>
+                                <% if(isAuthenticated) { %>
+                                    <form action="/shop/cart" method="POST">
+                                        <input type="hidden" name="_csrf" value="<%= csrfToken  %>">
+                                        <button>Add to Cart</button>
+                                        <input type="hidden" name="productId" value="<%= prods[i]._id %>">
+                                    </form>
+                                    <% } %>
                             </li>
                             <% } %>
                 </ul>

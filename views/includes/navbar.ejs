@@ -1,13 +1,35 @@
+<!-- header.ejs -->
 <header>
     <nav>
         <ul>
-            <li><a class="<%= path==='/shop' ? 'active' : '' %>" href="/shop">Shop</a></li>
-            <li><a class="<%= path==='/shop/products' ? 'active' : '' %>" href="/shop/products">Products</a></li>
+            <li><a class="<%= path === '/shop' ? 'active' : '' %>" href="/shop">Shop</a></li>
+            <li><a class="<%= path === '/shop/products' ? 'active' : '' %>" href="/shop/products">Products</a></li>
+            <% if(isAuthenticated) { %>
+                <li><a class="<%= path === '/shop/cart' ? 'active' : '' %>" href="/shop/cart">Cart</a></li>
+                <li><a class="<%= path === '/shop/orders' ? 'active' : '' %>" href="/shop/orders">Orders</a></li>
+                <li><a class="<%= path === '/admin/add-product' ? 'active' : '' %>" href="/admin/add-product">Add product</a></li>
+                <li><a class="<%= path === '/admin/products' ? 'active' : '' %>" href="/admin/products">Admin Products</a></li>
+                <% } %>
+        </ul>
 
-            <li><a class="<%= path==='/shop/cart' ? 'active' : '' %>" href="/shop/cart">Cart</a></li>
-            <li><a class="<%= path==='/shop/orders' ? 'active' : '' %>" href="/shop/orders">Orders</a></li>
-            <li><a class="<%= path==='/admin/add-product' ? 'active' : '' %>" href="/admin/add-product">Add product</a></li>
-            <li><a class="<%= path==='/admin/products' ? 'active' : '' %>" href="/admin/products">Admin Products</a></li>
+        <ul>
+            <% if(!isAuthenticated) { %>
+                <li>
+
+                    <a href="/auth/login">Login</a>
+
+
+
+                </li>
+                <li><a href="/auth/signup">Signup</a></li>
+                <% } else { %>
+                    <li>
+                        <form method="POST" action="/auth/logout">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken  %>">
+                            <button type="submit">Logout</button>
+                        </form>
+                    </li>
+                    <% } %>
         </ul>
     </nav>
 </header>

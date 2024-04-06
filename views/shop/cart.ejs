@@ -3,7 +3,7 @@
     <body>
         <%- include('../includes/navbar.ejs') %>
             <main>
-                <% if (cartProducts.length === 0) { %>
+                <% if (cartProducts.length === 0 || !(cartProducts)) { %>
                     <h1>CART IS EMPTY</h1>
                     <% } else { %>
                         <h1>USER CART</h1>
@@ -13,24 +13,27 @@
                         <ul>
                             <% for (let i = 0; i < cartProducts.length; i++) { %>
                                 <li>
-                                    <img src="<%= cartProducts[i].imageUrl %>" alt="<%= cartProducts[i].imageUrl %>">
+                                    <img src="<%= cartProducts[i].productId.imageUrl %>" alt="<%= cartProducts[i].productId.title %>">
                                     <!-- <strong>ID:</strong> <%= cartProducts[i]._id %> | -->
                                     <strong>Title:</strong>
-                                    <%= cartProducts[i].title %> |
-                                        <strong>Quantity:<%= cartProducts[i].quantity.quantity %></strong>
+                                    <%= cartProducts[i].productId.title %> |
+                                        <strong>Quantity:<%= cartProducts[i].quantity %></strong>
                                         <!-- Plus Button -->
                                         <form action="/shop/cart-update-increment" method="POST">
-                                            <input type="hidden" value="<%= cartProducts[i]._id %>" name="productId">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken  %>">
+                                            <input type="hidden" value="<%= cartProducts[i].productId._id %>" name="productId">
                                             <button type="submit">+</button>
                                         </form>
 
                                         <!-- Minus Button -->
                                         <form action="/shop/cart-update-decrement" method="POST">
-                                            <input type="hidden" value="<%= cartProducts[i]._id %>" name="productId">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken  %>">
+                                            <input type="hidden" value="<%= cartProducts[i].productId._id %>" name="productId">
                                             <button type="submit">-</button>
                                         </form>
                                         <form action="/shop/cart-delete/" method="POST">
-                                            <input type="hidden" value="<%= cartProducts[i]._id %>" name="productId">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken  %>">
+                                            <input type="hidden" value="<%=cartProducts[i].productId._id %>" name="productId">
                                             <button type="submit">DELETE</button>
                                         </form>
                                 </li>
@@ -38,6 +41,7 @@
                         </ul>
 
                         <form action="/shop/orders" method="POST">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken  %>">
                             <button type="submit">Order Now!</button>
                         </form>
                         <% } %>

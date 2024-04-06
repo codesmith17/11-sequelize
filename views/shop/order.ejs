@@ -1,5 +1,3 @@
-<!-- order.ejs -->
-
 <%- include('../includes/head.ejs') %>
 
     <body>
@@ -9,27 +7,26 @@
                 <% orders.forEach(order => { %>
                     <div class="order">
                         <h2>Order ID:
-                            <%= order.id %>
+                            <%= order._id %>
                         </h2>
                         <p>Total Quantity:
-                            <%= order.quantity %>
+                            <%= order.products.reduce((total, item) => total + item.quantity, 0) %>
                         </p>
                         <!-- You can add more details like order total, address, etc. here -->
                         <h3>Order Items</h3>
-                        <% orderItems.forEach(orderItem => { %>
-                            <% if (orderItem.orderId === order.id) { %>
-                                <div class="order-item">
-                                    <img src="<%= orderItem.product.imageUrl %>" alt="Product Image">
-                                    <p>Product ID:
-                                        <%= orderItem.productId %>
-                                    </p>
-                                    <p>Quantity:
-                                        <%= orderItem.quantity %>
-                                    </p>
-                                    <!-- You can display more details of the order item here -->
-                                </div>
-                                <% } %>
-                                    <% }); %>
+                        <% order.products.forEach(orderItem => { %>
+                            <div class="order-item">
+                                <img src="<%= orderItem.product.imageUrl %>" alt="Product Image">
+                                <p>Product ID:
+                                    <%= orderItem.product._id %>
+                                </p>
+                                <p>Quantity:
+                                    <%= orderItem.quantity %>
+                                </p>
+                                <!-- You can display more details of the order item here -->
+                            </div>
+                            <% }); %>
+                                <hr>
                     </div>
                     <% }); %>
             </main>

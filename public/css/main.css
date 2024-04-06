@@ -1,4 +1,4 @@
-/* Add these styles to your existing styles.css file */
+/* Global styles */
 
 body {
     font-family: 'Arial', sans-serif;
@@ -8,12 +8,27 @@ body {
     background-color: #f0f0f0;
 }
 
+
+/* Header styles */
+
 header {
     background-color: #333;
-    color: black;
+    color: white;
     padding: 10px;
     text-align: center;
 }
+
+.error {
+    background-color: #ffcccc;
+    color: #cc0000;
+    padding: 10px;
+    border: 1px solid #cc0000;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+
+/* Navigation styles */
 
 nav ul {
     list-style: none;
@@ -37,6 +52,9 @@ nav a:hover,
 nav a.active {
     color: blueviolet;
 }
+
+
+/* Main content styles */
 
 main {
     max-width: 1200px;
@@ -112,4 +130,24 @@ h4 {
 
 .active {
     color: blueviolet;
+}
+
+
+/* New styles */
+
+
+/* Additional styles for header navigation */
+
+nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+nav ul:last-child {
+    margin-left: auto;
+}
+
+nav ul:last-child li {
+    margin-left: 10px;
 }
